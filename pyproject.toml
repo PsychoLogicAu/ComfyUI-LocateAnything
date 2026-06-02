@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ComfyUI-LocateAnything"
+version = "1.0.0"
+description = "ComfyUI custom nodes for NVIDIA LocateAnything bounding box detection"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [
+    {name = "NVIDIA", email = ""}
+]
+keywords = ["comfyui", "locateanything", "detection", "bbox", "object-detection"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "torch>=2.0",
+    "torchvision>=0.15",
+    "transformers>=4.57.1",
+    "opencv-python-headless>=4.11.0.86",
+    "numpy>=1.25.0",
+    "Pillow>=11.1.0",
+    "lmdb>=1.7.5",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "black",
+    "flake8",
+]
+
+[tool.setuptools.packages.find]
+include = ["locate_anything_nodes*"]
+
+[tool.setuptools]
+py-modules = ["locate_anything_nodes"]

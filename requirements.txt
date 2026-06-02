@@ -1,0 +1,5 @@
+opencv-python-headless>=4.11.0.86
+transformers>=4.57.1
+numpy>=1.25.0
+Pillow>=11.1.0
+lmdb>=1.7.5
