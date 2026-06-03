@@ -38,16 +38,16 @@ This directory contains example workflows for the LocateAnything model integrati
 - `parsed_boxes` - JSON with bounding boxes (pixel coordinates)
 - `annotated_image` - Image with drawn bounding boxes
 
-**Example Prompt:**
-```
-"Locate all the instances that matches the following description: person,car,bicycle."
-```
-
 **Input Image:**
 
 ![Input Image](chair_person_car_dog_laptop.png)
 
-**Workflow:**
+**Categories Input:**
+```
+"chair, person, car, dog, laptop"
+```
+
+**Result (workflow in image metadata):**
 
 ![Object Detection Workflow](example_1_object_detection.png)
 
