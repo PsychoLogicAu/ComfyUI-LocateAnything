@@ -177,7 +177,7 @@ class LocateAnythingConfig:
                 "temperature": ("FLOAT", {"default": 0.7, "min": 0.0, "max": 1.0, "step": 0.01}),
                 "top_p": ("FLOAT", {"default": 0.9, "min": 0.0, "max": 1.0, "step": 0.01}),
                 "do_sample": ("BOOLEAN", {"default": True}),
-                "generation_mode": (["hybrid", "direct"], {"default": "hybrid"}),
+                "generation_mode": (["fast", "slow", "hybrid"], {"default": "hybrid"}),
                 "use_cache": ("BOOLEAN", {"default": True}),
                 "repetition_penalty": (
                     "FLOAT",

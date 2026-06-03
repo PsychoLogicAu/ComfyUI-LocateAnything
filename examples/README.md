@@ -236,7 +236,8 @@ Prompt: "text"
 | Mode | Speed | Best For |
 |------|-------|----------|
 | `hybrid` | Balanced | General-purpose use, best overall results |
-| `direct` | Faster | Simpler tasks |
+| `fast` | Faster | Simpler tasks (MTP-only decoding) |
+| `slow` | Slower | Higher accuracy (NTP/AR decoding) |
 
 **Recommendation:** Use `"hybrid"` as the default for most workflows.
 
