@@ -43,6 +43,14 @@ This directory contains example workflows for the LocateAnything model integrati
 "Locate all the instances that matches the following description: person,car,bicycle."
 ```
 
+**Input Image:**
+
+![Input Image](chair_person_car_dog_laptop.png)
+
+**Workflow:**
+
+![Object Detection Workflow](example_1_object_detection.png)
+
 ---
 
 ### 2. Single/Multi Object Grounding (Phrase Grounding)
