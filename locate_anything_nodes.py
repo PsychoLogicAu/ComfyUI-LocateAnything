@@ -178,7 +178,6 @@ class LocateAnythingConfig:
                 "top_p": ("FLOAT", {"default": 0.9, "min": 0.0, "max": 1.0, "step": 0.01}),
                 "do_sample": ("BOOLEAN", {"default": True}),
                 "generation_mode": (["fast", "slow", "hybrid"], {"default": "hybrid"}),
-                "use_cache": ("BOOLEAN", {"default": True}),
                 "repetition_penalty": (
                     "FLOAT",
                     {"default": 1.1, "min": 1.0, "max": 2.0, "step": 0.1},
@@ -198,7 +197,6 @@ class LocateAnythingConfig:
         top_p,
         do_sample,
         generation_mode,
-        use_cache,
         repetition_penalty,
     ):
         config = {
@@ -207,7 +205,6 @@ class LocateAnythingConfig:
             "top_p": top_p,
             "do_sample": do_sample,
             "generation_mode": generation_mode,
-            "use_cache": use_cache,
             "repetition_penalty": repetition_penalty,
         }
         return (config,)
@@ -228,7 +225,6 @@ class _InferenceNode:
             "top_p": config.get("top_p", 0.9),
             "do_sample": config.get("do_sample", True),
             "generation_mode": config.get("generation_mode", "hybrid"),
-            "use_cache": config.get("use_cache", True),
             "repetition_penalty": config.get("repetition_penalty", 1.1),
         }
         return locate_anything, inference_kw

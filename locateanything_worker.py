@@ -153,7 +153,6 @@ class LocateAnythingModel:
         temperature=0.7,
         top_p=0.9,
         do_sample=True,
-        use_cache=True,
         repetition_penalty=1.1,
         verbose=True,
     ):
@@ -193,7 +192,7 @@ class LocateAnythingModel:
             image_grid_hws=image_grid_hws,
             tokenizer=self.tokenizer,
             max_new_tokens=max_new_tokens,
-            use_cache=use_cache,
+            use_cache=True,  # model's generate() asserts use_cache=True
             generation_mode=generation_mode,
             temperature=temperature,
             do_sample=do_sample,
