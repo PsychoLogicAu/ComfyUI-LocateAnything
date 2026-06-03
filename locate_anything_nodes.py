@@ -290,7 +290,7 @@ class LocateAnythingGroundPhrase(_InferenceNode):
         }
 
     RETURN_TYPES = ("text", "text", "IMAGE")
-    RETURN_NAMES = ("grounding_result", "parsed_boxes", "annotated_image")
+    RETURN_NAMES = ("grounding_result", "detections", "annotated_image")
     FUNCTION = "ground_phrase"
     CATEGORY = "Locate Anything/Grounding/Phrase"
 

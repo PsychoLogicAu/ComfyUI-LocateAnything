@@ -69,8 +69,21 @@ This directory contains example workflows for the LocateAnything model integrati
 
 **Outputs:**
 - `grounding_result` - Raw model response
-- `parsed_boxes` - JSON with bounding box(es)
+- `detections` - JSON with bounding box(es)
 - `annotated_image` - Image with drawn bounding boxes
+
+**Input Image:**
+
+![Input Image](chair_person_car_dog_laptop.png)
+
+**Phrase Input:**
+```
+"Locate the left hand of the person"
+```
+
+**Result (workflow in image metadata):**
+
+![Phrase Grounding Workflow](example_2_phrase_grounding.png)
 
 **Example Prompts:**
 ```
@@ -228,7 +241,7 @@ All bounding boxes and points are returned in **pixel coordinates** relative to 
    ↓
 4. Outputs:
    ├─ detection_result → [Show Text]
-   ├─ parsed_boxes → [Show JSON]
+   ├─ detections → [Show JSON]
    └─ annotated_image → [Save Image]
 ```
 
