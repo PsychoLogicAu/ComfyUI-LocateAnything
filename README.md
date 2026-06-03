@@ -105,8 +105,8 @@ ComfyUI custom nodes for NVIDIA's [LocateAnything-3B](https://huggingface.co/nvi
    - Set `categories` to comma-separated object names (e.g., "person, car, dog")
 
 4. The node outputs:
-   - `detection_result`: Raw model output text
-   - `parsed_boxes`: JSON-formatted bounding box coordinates
+   - `detection_result`: Raw model output text with `<ref>/<box>` tags
+   - `detections`: Parsed dict mapping labels to bounding box lists (connects to **Locate Anything to SEGS**)
    - `annotated_image`: Image with bounding boxes drawn in red
 
 ### Phrase Grounding Workflow
@@ -142,39 +142,54 @@ Use the **GUI Grounding** node to detect UI elements:
 
 ## Output Format
 
-### Bounding Box Output (JSON)
+### Bounding Box Output (Detect Objects)
 
-The `parsed_boxes` output is a JSON array of bounding box objects:
+The `detections` output from the **Detect Objects** node is a dictionary mapping each detected label to a list of bounding box objects:
 
 ```json
-[
-  {
-    "x1": 120,
-    "y1": 80,
-    "x2": 340,
-    "y2": 520,
-    "label": "person"
-  },
-  ...
-]
+{
+  "person": [
+    {
+      "x1": 120,
+      "y1": 80,
+      "x2": 340,
+      "y2": 520
+    }
+  ],
+  "car": [
+    {
+      "x1": 500,
+      "y1": 200,
+      "x2": 700,
+      "y2": 450
+    }
+  ]
+}
 ```
 
-Coordinates are in pixel space relative to the input image dimensions.
+Coordinates are integer pixel values relative to the input image dimensions. This output can be connected directly to the **Locate Anything to SEGS** node via the `detections` input.
 
-### Point Output (JSON)
+The `detection_result` output contains the raw model text with `<ref>label</ref><box>x1><y1><x2><y2></box>` tags.
 
-The `parsed_points` output is a JSON array of point objects:
+### SEGS Output (Locate Anything to SEGS)
+
+The **Locate Anything to SEGS** node converts bounding-box detections to Impact Pack SEGS format: `(shape, segs)` where each SEG is a namedtuple with `cropped_image`, `cropped_mask`, `confidence`, `crop_region`, `bbox`, `label`, and `control_net_wrapper` fields. This output is compatible with Impact Pack nodes such as SAMDetector.
+
+### Point Output (Point to Object)
+
+The `parsed_points` output from the **Point to Object** node is a JSON array of point objects:
 
 ```json
 [
   {
     "x": 256,
-    "y": 180,
-    "label": "the traffic light"
+    "y": 180
   },
   ...
 ]
 ```
+
+Coordinates are integer pixel values relative to the input image dimensions.
 
 ## Model Information
 
