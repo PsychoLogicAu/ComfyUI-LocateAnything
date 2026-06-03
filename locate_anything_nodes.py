@@ -24,9 +24,18 @@ import json
 import logging
 import numpy as np
 from PIL import Image, ImageDraw
+from collections import namedtuple
 import torch
 
 from .locateanything_worker import LocateAnythingModel, map_dtype_to_torch
+
+# SEG namedtuple matching Impact Pack's definition exactly.
+# See: ComfyUI-Impact-Pack/modules/impact/core.py
+SEG = namedtuple(
+    "SEG",
+    ["cropped_image", "cropped_mask", "confidence", "crop_region", "bbox", "label", "control_net_wrapper"],
+    defaults=[None],
+)
 
 logger = logging.getLogger(__name__)
 
@@ -246,8 +255,8 @@ class LocateAnythingDetector(_InferenceNode):
             "optional": {"config": ("locate_anything_config",)},
         }
 
-    RETURN_TYPES = ("text", "text", "IMAGE")
-    RETURN_NAMES = ("detection_result", "parsed_boxes", "annotated_image")
+    RETURN_TYPES = ("text", "locate_anything_detections", "IMAGE")
+    RETURN_NAMES = ("detection_result", "detections", "annotated_image")
     FUNCTION = "detect"
     CATEGORY = "Locate Anything/Detection"
 
@@ -256,9 +265,11 @@ class LocateAnythingDetector(_InferenceNode):
         cat_list = [c.strip() for c in categories.split(",")]
         pil = _tensor_to_pil(image[0])
         result = model.detect(pil, categories=cat_list, **kw)
-        boxes = LocateAnythingModel.parse_boxes(result["answer"], pil.size[0], pil.size[1])
-        annotated = _pil_to_tensor(_draw_boxes(pil, boxes))
-        return (result["answer"], json.dumps(boxes, indent=2), annotated)
+        labeled_boxes = LocateAnythingModel.parse_boxes_with_labels(result["answer"], pil.size[0], pil.size[1])
+        # Flatten for drawing
+        flat_boxes = [b for boxes in labeled_boxes.values() for b in boxes]
+        annotated = _pil_to_tensor(_draw_boxes(pil, flat_boxes))
+        return (result["answer"], labeled_boxes, annotated)
 
 
 class LocateAnythingGroundPhrase(_InferenceNode):
@@ -464,11 +475,161 @@ class LocateAnythingDebug(_InferenceNode):
 
         try:
             result = model.detect(pil, categories=test_categories.split(","), **kw)
-            debug_text += f"\n\nObject Detection Test:\nCategories: {test_categories}\nOutput: {result['answer'][:200]}..."
+            labeled = LocateAnythingModel.parse_boxes_with_labels(result["answer"], pil.size[0], pil.size[1])
+            debug_text += f"\n\nObject Detection Test:\nCategories: {test_categories}\nOutput: {result['answer'][:200]}...\n\nLabeled boxes:\n{json.dumps(labeled, indent=2)}"
         except Exception as e:
             debug_text += f"\n\nObject Detection Error: {e}"
 
         return (json.dumps(model_info, indent=2), _pil_to_tensor(debug_image), debug_text)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# BBOX to SEGS converter
+# ──────────────────────────────────────────────────────────────────────────────
+
+class LocateAnythingToSEGS:
+    """Convert Locate Anything bounding-box detections to Impact Pack SEGS format.
+
+    Takes the ``detections`` dict (label -> [box, ...]) from the Detect Objects
+    node together with the image (and optional mask), creates a binary mask for
+    each detection, and returns an Impact-Pack-compatible ``(shape, segs)`` tuple
+    plus a combined mask tensor.
+
+    Impact Pack SEGS format: ``( (height, width), [SEG, SEG, ...] )`` where each SEG
+    is a namedtuple with fields:
+        cropped_image, cropped_mask, confidence, crop_region, bbox, label, control_net_wrapper
+    """
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "image": ("IMAGE", {
+                    "tooltip": "Source image (used to determine dimensions for mask creation).",
+                }),
+                "detections": ("locate_anything_detections", {
+                    "tooltip": "Detections dict from Detect Objects node (label -> [box, ...]).",
+                }),
+                "default_confidence": ("FLOAT", {
+                    "default": 0.85,
+                    "min": 0.0,
+                    "max": 1.0,
+                    "step": 0.01,
+                    "tooltip": "Confidence score assigned to each detection (model does not produce confidence values).",
+                }),
+                "crop_factor": ("FLOAT", {
+                    "default": 1.0,
+                    "min": 0.5,
+                    "max": 2.0,
+                    "step": 0.1,
+                    "tooltip": "Padding multiplier for crop_region. 1.0 = no padding.",
+                }),
+            },
+            "optional": {
+                "mask": ("MASK", {
+                    "tooltip": "Optional existing mask to add detections to. If not provided, starts with an empty mask.",
+                }),
+            },
+        }
+
+    RETURN_TYPES = ("SEGS", "MASK")
+    RETURN_NAMES = ("SEGS", "combined_mask")
+    FUNCTION = "convert"
+    CATEGORY = "Locate Anything/Conversion"
+    DESCRIPTION = "Converts Locate Anything bbox detections to Impact Pack SEGS format."
+
+    def convert(
+        self,
+        image: torch.Tensor,
+        detections: dict,
+        default_confidence: float,
+        crop_factor: float,
+        mask: torch.Tensor = None,
+    ):
+        """Convert detections dict to SEGS format.
+
+        Returns:
+            tuple: (segs_tuple, combined_mask_tensor)
+                - segs_tuple: ((height, width), [SEG, ...])
+                - combined_mask_tensor: [1, H, W] tensor with all detection masks
+        """
+        # Determine image dimensions from tensor
+        if image.dim() == 4:
+            height, width = image.shape[1], image.shape[2]
+        elif image.dim() == 3:
+            height, width = image.shape[0], image.shape[1]
+        else:
+            raise ValueError(f"Unexpected image tensor shape: {image.shape}")
+
+        # detections is already the parsed label -> [box, ...] dict
+        labeled_boxes = detections
+
+        # Start with provided mask or create empty one
+        if mask is not None:
+            # Ensure mask is 3D [1, H, W] or 2D [H, W]
+            if mask.dim() == 4:
+                combined_mask = mask[0]  # [H, W, 1] -> squeeze later
+            elif mask.dim() == 3:
+                combined_mask = mask[:, :, 0] if mask.shape[2] == 1 else mask[0]
+            else:
+                combined_mask = mask
+            # Ensure correct shape
+            if combined_mask.shape != (height, width):
+                # Resize if needed
+                combined_mask = torch.nn.functional.interpolate(
+                    combined_mask.unsqueeze(0).unsqueeze(0),
+                    size=(height, width),
+                    mode="nearest"
+                ).squeeze()
+        else:
+            combined_mask = torch.zeros((height, width), dtype=torch.float32)
+
+        # Build SEGS list
+        segs = []
+        for label, boxes in labeled_boxes.items():
+            for box in boxes:
+                x1, y1, x2, y2 = box["x1"], box["y1"], box["x2"], box["y2"]
+
+                # Clamp coordinates to image bounds
+                x1, y1 = max(0, x1), max(0, y1)
+                x2, y2 = min(width, x2), min(height, y2)
+
+                if x2 <= x1 or y2 <= y1:
+                    continue  # Skip invalid boxes
+
+                # Create binary mask for this bbox
+                bbox_mask = torch.zeros((height, width), dtype=torch.float32)
+                bbox_mask[y1:y2, x1:x2] = 1.0
+
+                # Add to combined mask
+                combined_mask = torch.maximum(combined_mask, bbox_mask)
+
+                # Compute crop_region with optional padding
+                cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
+                bw = int((x2 - x1) * crop_factor / 2)
+                bh = int((y2 - y1) * crop_factor / 2)
+                crop_x1 = max(0, cx - bw)
+                crop_y1 = max(0, cy - bh)
+                crop_x2 = min(width, cx + bw)
+                crop_y2 = min(height, cy + bh)
+
+                # Create SEG
+                seg = SEG(
+                    cropped_image=None,
+                    cropped_mask=bbox_mask,
+                    confidence=default_confidence,
+                    crop_region=[crop_x1, crop_y1, crop_x2, crop_y2],
+                    bbox=[x1, y1, x2, y2],
+                    label=label,
+                    control_net_wrapper=None,
+                )
+                segs.append(seg)
+
+        # Build SEGS tuple: ((height, width), [SEG, ...])
+        segs_tuple = ((height, width), segs)
+
+        # combined_mask is already [H, W], Impact Pack expects [H, W] for MASK
+        return (segs_tuple, combined_mask)
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -484,6 +645,7 @@ NODE_CLASS_MAPPINGS = {
     "LocateAnythingPoint": LocateAnythingPoint,
     "LocateAnythingGUIGround": LocateAnythingGUIGround,
     "LocateAnythingDebug": LocateAnythingDebug,
+    "LocateAnythingToSEGS": LocateAnythingToSEGS,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -495,6 +657,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "LocateAnythingPoint": "Point to Object",
     "LocateAnythingGUIGround": "GUI Grounding",
     "LocateAnythingDebug": "Debug Model",
+    "LocateAnythingToSEGS": "Locate Anything to SEGS",
 }
 
 __all__ = [

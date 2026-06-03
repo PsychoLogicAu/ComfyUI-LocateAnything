@@ -256,15 +256,16 @@ class LocateAnythingModel:
         """Parse model output into pixel-coordinate bounding boxes.
 
         Coordinates in model output are normalized integers in [0, 1000].
+        Output coordinates are rounded to integers.
         """
         boxes = []
         for m in re.finditer(r"<box><(\d+)><(\d+)><(\d+)><(\d+)></box>", answer):
             x1, y1, x2, y2 = [int(g) for g in m.groups()]
             boxes.append({
-                "x1": x1 / 1000 * image_width,
-                "y1": y1 / 1000 * image_height,
-                "x2": x2 / 1000 * image_width,
-                "y2": y2 / 1000 * image_height,
+                "x1": int(round(x1 / 1000 * image_width)),
+                "y1": int(round(y1 / 1000 * image_height)),
+                "x2": int(round(x2 / 1000 * image_width)),
+                "y2": int(round(y2 / 1000 * image_height)),
             })
         return boxes
 
@@ -279,6 +280,59 @@ class LocateAnythingModel:
                 "y": y / 1000 * image_height,
             })
         return points
+
+    @staticmethod
+    def parse_boxes_with_labels(answer, image_width, image_height):
+        """Parse model output into labeled bounding boxes grouped by category.
+
+        Returns a dict: {"label": [{"x1": int, "y1": int, "x2": int, "y2": int}, ...], ...}
+        Coordinates are rounded to integers.
+        """
+        result = {}
+        current_label = "unknown"
+
+        # Track all <ref> tags to know when we switch labels
+        refs = list(re.finditer(r"<ref>([^<]+)</ref>", answer))
+        boxes = list(re.finditer(r"<box><(\d+)><(\d+)><(\d+)><(\d+)></box>", answer))
+
+        box_idx = 0
+        for ref_match in refs:
+            label = ref_match.group(1).strip()
+            # Find all boxes that appear after this ref and before the next ref
+            label_boxes = []
+            next_ref_start = refs[refs.index(ref_match) + 1].start() if ref_match != refs[-1] else len(answer)
+            
+            while box_idx < len(boxes) and boxes[box_idx].start() < next_ref_start:
+                b = boxes[box_idx]
+                x1, y1, x2, y2 = [int(g) for g in b.groups()]
+                label_boxes.append({
+                    "x1": int(round(x1 / 1000 * image_width)),
+                    "y1": int(round(y1 / 1000 * image_height)),
+                    "x2": int(round(x2 / 1000 * image_width)),
+                    "y2": int(round(y2 / 1000 * image_height)),
+                })
+                box_idx += 1
+
+            if label_boxes:
+                result[label] = label_boxes
+
+        # Handle boxes after the last ref (use last label)
+        if box_idx < len(boxes) and refs:
+            last_label = refs[-1].group(1).strip()
+            existing = result.get(last_label, [])
+            while box_idx < len(boxes):
+                b = boxes[box_idx]
+                x1, y1, x2, y2 = [int(g) for g in b.groups()]
+                existing.append({
+                    "x1": int(round(x1 / 1000 * image_width)),
+                    "y1": int(round(y1 / 1000 * image_height)),
+                    "x2": int(round(x2 / 1000 * image_width)),
+                    "y2": int(round(y2 / 1000 * image_height)),
+                })
+                box_idx += 1
+            result[last_label] = existing
+
+        return result
 
 
 # ─────────────────────────────────────────────────────────────
