@@ -116,7 +116,7 @@ where categories are joined with `</c>` separators.
 **Inputs:**
 - **Model:** The loaded Locate Anything model
 - **Image:** The source image
-- **Phrase:** Text to locate (e.g., `"text"`)
+- **Phrase:** Text to locate (e.g., `"the word 'Original'"`)
 
 **Outputs:**
 - `grounding_result` - Raw model response
@@ -128,10 +128,20 @@ where categories are joined with `</c>` separators.
 "Please locate the text referred as <phrase>."
 ```
 
-**Example:**
+**Input Image:**
+
+![Input Image](three_way_compare_cc.png)
+
+*Image credit: 'Diff and Merge GUI Tool' by [xmodulo.com](https://xmodulo.com) is licensed under CC BY 2.0.*
+
+**Phrase Input:**
 ```
-Prompt: "text"
+"the word "Original""
 ```
+
+**Result (workflow in image metadata):**
+
+![Text Grounding Workflow](example_3_text_grounding.png)
 
 ---
 
