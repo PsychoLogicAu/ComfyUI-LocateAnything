@@ -290,7 +290,7 @@ class LocateAnythingGroundPhrase(_InferenceNode):
         }
 
     RETURN_TYPES = ("text", "text", "IMAGE")
-    RETURN_NAMES = ("grounding_result", "detections", "annotated_image")
+    RETURN_NAMES = ("grounding_result", "boxes", "annotated_image")
     FUNCTION = "ground_phrase"
     CATEGORY = "Locate Anything/Grounding/Phrase"
 
@@ -325,7 +325,7 @@ class LocateAnythingGroundText(_InferenceNode):
         }
 
     RETURN_TYPES = ("text", "text", "IMAGE")
-    RETURN_NAMES = ("grounding_result", "parsed_boxes", "annotated_image")
+    RETURN_NAMES = ("grounding_result", "boxes", "annotated_image")
     FUNCTION = "ground_text"
     CATEGORY = "Locate Anything/Grounding/Text"
 
@@ -360,7 +360,7 @@ class LocateAnythingPoint(_InferenceNode):
         }
 
     RETURN_TYPES = ("text", "text", "IMAGE")
-    RETURN_NAMES = ("pointing_result", "parsed_points", "annotated_image")
+    RETURN_NAMES = ("pointing_result", "points", "annotated_image")
     FUNCTION = "point"
     CATEGORY = "Locate Anything/Pointing"
 
@@ -396,7 +396,7 @@ class LocateAnythingGUIGround(_InferenceNode):
         }
 
     RETURN_TYPES = ("text", "text", "IMAGE")
-    RETURN_NAMES = ("gui_result", "parsed_output", "annotated_image")
+    RETURN_NAMES = ("gui_result", "boxes_or_points", "annotated_image")
     FUNCTION = "gui_ground"
     CATEGORY = "Locate Anything/GUI Grounding"
 

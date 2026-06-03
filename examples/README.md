@@ -35,7 +35,7 @@ This directory contains example workflows for the LocateAnything model integrati
 
 **Outputs:**
 - `detection_result` - Raw model response text
-- `parsed_boxes` - JSON with bounding boxes (pixel coordinates)
+- `detections` - JSON with bounding boxes (pixel coordinates, grouped by label)
 - `annotated_image` - Image with drawn bounding boxes
 
 **Note:** The backend constructs the model prompt as:
@@ -75,7 +75,7 @@ where categories are joined with `</c>` separators.
 
 **Outputs:**
 - `grounding_result` - Raw model response
-- `detections` - JSON with bounding box(es)
+- `boxes` - JSON with bounding box(es)
 - `annotated_image` - Image with drawn bounding boxes
 
 **Note:** The backend constructs the model prompt as:
@@ -120,7 +120,7 @@ where categories are joined with `</c>` separators.
 
 **Outputs:**
 - `grounding_result` - Raw model response
-- `parsed_boxes` - JSON with bounding boxes for text regions
+- `boxes` - JSON with bounding boxes for text regions
 - `annotated_image` - Image with drawn text bounding boxes
 
 **Note:** The backend constructs the model prompt as:
@@ -150,7 +150,7 @@ Prompt: "text"
 
 **Outputs:**
 - `pointing_result` - Raw model response
-- `parsed_points` - JSON with point coordinates
+- `points` - JSON with point coordinates
 - `annotated_image` - Image with drawn points
 
 **Note:** The backend constructs the model prompt as:
@@ -179,11 +179,11 @@ Prompt: "text"
 - **Model:** The loaded Locate Anything model
 - **Image:** Screenshot or GUI image
 - **Phrase:** GUI element description (e.g., "the search button")
-- **Output Type:** `"box"` (default) or `"point"`
+- **Output Type:** `"box"` (default)
 
 **Outputs:**
 - `gui_result` - Raw model response
-- `parsed_output` - JSON with bounding boxes or points
+- `boxes_or_points` - JSON with bounding boxes
 - `annotated_image` - Image with drawn results
 
 **Note:** The backend constructs the model prompt as:
@@ -215,7 +215,7 @@ Prompt: "text"
 
 **Outputs:**
 - `gui_result` - Raw model response
-- `parsed_output` - JSON with point coordinates
+- `boxes_or_points` - JSON with point coordinates
 - `annotated_image` - Image with drawn points
 
 **Note:** The backend constructs the model prompt as:
