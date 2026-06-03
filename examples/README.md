@@ -38,6 +38,12 @@ This directory contains example workflows for the LocateAnything model integrati
 - `parsed_boxes` - JSON with bounding boxes (pixel coordinates)
 - `annotated_image` - Image with drawn bounding boxes
 
+**Note:** The backend constructs the model prompt as:
+```
+"Locate all the instances that matches the following description: <cat1>/<cat2>/<cat3>."
+```
+where categories are joined with `</c>` separators.
+
 **Input Image:**
 
 ![Input Image](chair_person_car_dog_laptop.png)
@@ -71,6 +77,11 @@ This directory contains example workflows for the LocateAnything model integrati
 - `grounding_result` - Raw model response
 - `detections` - JSON with bounding box(es)
 - `annotated_image` - Image with drawn bounding boxes
+
+**Note:** The backend constructs the model prompt as:
+```
+"Locate all the instances that match the following description: <phrase>."
+```
 
 **Input Image:**
 
@@ -112,6 +123,11 @@ This directory contains example workflows for the LocateAnything model integrati
 - `parsed_boxes` - JSON with bounding boxes for text regions
 - `annotated_image` - Image with drawn text bounding boxes
 
+**Note:** The backend constructs the model prompt as:
+```
+"Please locate the text referred as <phrase>."
+```
+
 **Example:**
 ```
 Prompt: "text"
@@ -137,11 +153,16 @@ Prompt: "text"
 - `parsed_points` - JSON with point coordinates
 - `annotated_image` - Image with drawn points
 
-**Example Prompts:**
+**Note:** The backend constructs the model prompt as:
 ```
-"Point to: the center of the image."
-"Point to: the brightest spot in the image."
-"Point to: the traffic light."
+"Point to: <phrase>."
+```
+
+**Example Phrase Inputs:**
+```
+"the center of the image."
+"the brightest spot in the image."
+"the traffic light."
 ```
 
 ---
@@ -165,10 +186,15 @@ Prompt: "text"
 - `parsed_output` - JSON with bounding boxes or points
 - `annotated_image` - Image with drawn results
 
-**Example Prompts:**
+**Note:** The backend constructs the model prompt as:
 ```
-"Locate the region that matches the following description: the search button."
-"Locate the region that matches the following description: the window close button."
+"Locate the region that matches the following description: <phrase>."
+```
+
+**Example Phrase Inputs:**
+```
+"the search button."
+"the window close button."
 ```
 
 ---
@@ -192,10 +218,15 @@ Prompt: "text"
 - `parsed_output` - JSON with point coordinates
 - `annotated_image` - Image with drawn points
 
-**Example Prompts:**
+**Note:** The backend constructs the model prompt as:
 ```
-"Point to: the minimize button."
-"Point to: the application icon."
+"Point to: <phrase>."
+```
+
+**Example Phrase Inputs:**
+```
+"the minimize button."
+"the application icon."
 ```
 
 ---
