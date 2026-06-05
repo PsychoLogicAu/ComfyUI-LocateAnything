@@ -596,20 +596,28 @@ class LocateAnythingToSEGS:
 
         # Start with provided mask or create empty one
         if mask is not None:
-            # Ensure mask is 3D [1, H, W] or 2D [H, W]
+            # Normalize mask to 2D [H, W] regardless of input shape
             if mask.dim() == 4:
-                combined_mask = mask[0]  # [H, W, 1] -> squeeze later
+                # [batch, H, W] -> take first batch
+                combined_mask = mask[0]
             elif mask.dim() == 3:
-                combined_mask = mask[:, :, 0] if mask.shape[2] == 1 else mask[0]
-            else:
+                # [H, W, 1] or [batch, H, W] -> squeeze/extract
+                if mask.shape[-1] == 1:
+                    combined_mask = mask[:, :, 0]
+                else:
+                    combined_mask = mask[0]
+            elif mask.dim() == 2:
                 combined_mask = mask
-            # Ensure correct shape
+            else:
+                raise ValueError(
+                    f"Mask must be 2D/3D/4D tensor, got {mask.dim()}D with shape {mask.shape}"
+                )
+            # Ensure correct dimensions - resize if mismatch
             if combined_mask.shape != (height, width):
-                # Resize if needed
                 combined_mask = torch.nn.functional.interpolate(
                     combined_mask.unsqueeze(0).unsqueeze(0),
                     size=(height, width),
-                    mode="nearest"
+                    mode="nearest",
                 ).squeeze()
         else:
             combined_mask = torch.zeros((height, width), dtype=torch.float32)
