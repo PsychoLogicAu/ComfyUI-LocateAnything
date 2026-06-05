@@ -24,7 +24,7 @@ import json
 import logging
 import numpy as np
 from PIL import Image, ImageDraw
-from collections import namedtuple
+from collections import namedtuple, OrderedDict
 import torch
 
 from .locateanything_worker import LocateAnythingModel, map_dtype_to_torch
@@ -41,8 +41,9 @@ logger = logging.getLogger(__name__)
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# Cache: model_path:dtype -> LocateAnythingModel instance
-_WORKER_CACHE: dict[str, "LocateAnythingModel"] = {}
+# Model cache (LRU eviction to prevent unbounded growth)
+_WORKER_CACHE_MAX: int = 2  # Max models to keep cached at once
+_WORKER_CACHE: OrderedDict[str, "LocateAnythingModel"] = OrderedDict()
 
 
 def _get_or_create_model(
@@ -51,20 +52,41 @@ def _get_or_create_model(
     trust_remote_code: bool,
     attention_implementation: str,
 ) -> "LocateAnythingModel":
-    """Get or create a LocateAnythingModel from the cache."""
+    """Get or create a LocateAnythingModel from the cache.
+    
+    Uses LRU eviction: when the cache exceeds _WORKER_CACHE_MAX entries,
+    the least-recently-used model is evicted and its GPU memory freed.
+    """
     cache_key = f"{model_path}:{dtype_str}:{attention_implementation}"
 
-    if cache_key not in _WORKER_CACHE:
-        dtype = map_dtype_to_torch(dtype_str)
-        model = LocateAnythingModel(
-            model_path=model_path,
-            dtype=dtype,
-            trust_remote_code=trust_remote_code,
-            attention_implementation=attention_implementation,
-        )
-        _WORKER_CACHE[cache_key] = model
-        logger.info(f"Loaded LocateAnythingModel: {model_path}")
-    return _WORKER_CACHE[cache_key]
+    # Mark as most-recently-used if already cached
+    if cache_key in _WORKER_CACHE:
+        _WORKER_CACHE.move_to_end(cache_key)
+        return _WORKER_CACHE[cache_key]
+
+    # Evict LRU entries if cache is full
+    while len(_WORKER_CACHE) > _WORKER_CACHE_MAX:
+        evicted_key, evicted_model = _WORKER_CACHE.popitem(last=False)
+        # Sever references so HF weights can be GC'd
+        try:
+            if hasattr(evicted_model, "patcher"):
+                del evicted_model.patcher
+        except Exception:
+            pass
+        del evicted_model
+        logger.info(f"Evicted LRU model from cache: {evicted_key} "
+                    f"({_WORKER_CACHE_MAX+1} > {_WORKER_CACHE_MAX})")
+
+    dtype = map_dtype_to_torch(dtype_str)
+    model = LocateAnythingModel(
+        model_path=model_path,
+        dtype=dtype,
+        trust_remote_code=trust_remote_code,
+        attention_implementation=attention_implementation,
+    )
+    _WORKER_CACHE[cache_key] = model
+    logger.info(f"Loaded LocateAnythingModel: {model_path}")
+    return model
 
 
 # ──────────────────────────────────────────────────────────────────────────────
