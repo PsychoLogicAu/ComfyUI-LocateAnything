@@ -57,6 +57,9 @@ def _get_or_create_model(
     Uses LRU eviction: when the cache exceeds _WORKER_CACHE_MAX entries,
     the least-recently-used model is evicted and its GPU memory freed.
     """
+    # Strip whitespace from model_path (common copy-paste error)
+    model_path = model_path.strip()
+    
     cache_key = f"{model_path}:{dtype_str}:{attention_implementation}"
 
     # Mark as most-recently-used if already cached
@@ -279,8 +282,14 @@ class LocateAnythingDetector(_InferenceNode):
     CATEGORY = "Locate Anything/Detection"
 
     def detect(self, locate_anything, image, categories, config=None):
+        if not categories or not categories.strip():
+            raise ValueError("categories cannot be empty")
         model, kw = self._resolve_model_and_config(locate_anything, config)
         cat_list = [c.strip() for c in categories.split(",")]
+        # Remove empty entries after split
+        cat_list = [c for c in cat_list if c]
+        if not cat_list:
+            raise ValueError("No valid categories found after parsing")
         pil = _tensor_to_pil(image[0])
         result = model.detect(pil, categories=cat_list, **kw)
         labeled_boxes = LocateAnythingModel.parse_boxes_with_labels(result["answer"], pil.size[0], pil.size[1])
@@ -313,6 +322,9 @@ class LocateAnythingGroundPhrase(_InferenceNode):
     CATEGORY = "Locate Anything/Grounding/Phrase"
 
     def ground_phrase(self, locate_anything, image, phrase, config=None):
+        phrase = phrase.strip()
+        if not phrase:
+            raise ValueError("phrase cannot be empty")
         model, kw = self._resolve_model_and_config(locate_anything, config)
         pil = _tensor_to_pil(image[0])
         result = model.ground_multi(pil, phrase=phrase, **kw)
