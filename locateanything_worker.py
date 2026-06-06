@@ -146,6 +146,7 @@ class LocateAnythingModel:
         do_sample=True,
         repetition_penalty=1.1,
         verbose=True,
+        use_cache=True,
     ):
         """Run inference with ComfyUI-compatible memory management.
 
@@ -183,7 +184,7 @@ class LocateAnythingModel:
             image_grid_hws=image_grid_hws,
             tokenizer=self.tokenizer,
             max_new_tokens=max_new_tokens,
-            use_cache=True,  # model's generate() asserts use_cache=True
+            use_cache=use_cache,
             generation_mode=generation_mode,
             temperature=temperature,
             do_sample=do_sample,

@@ -202,6 +202,7 @@ class LocateAnythingConfig:
                 "temperature": ("FLOAT", {"default": 0.7, "min": 0.0, "max": 1.0, "step": 0.01}),
                 "top_p": ("FLOAT", {"default": 0.9, "min": 0.0, "max": 1.0, "step": 0.01}),
                 "do_sample": ("BOOLEAN", {"default": True}),
+                "use_cache": ("BOOLEAN", {"default": True}),
                 "generation_mode": (["fast", "slow", "hybrid"], {"default": "hybrid"}),
                 "repetition_penalty": (
                     "FLOAT",
@@ -221,6 +222,7 @@ class LocateAnythingConfig:
         temperature,
         top_p,
         do_sample,
+        use_cache,
         generation_mode,
         repetition_penalty,
     ):
@@ -229,6 +231,7 @@ class LocateAnythingConfig:
             "temperature": temperature,
             "top_p": top_p,
             "do_sample": do_sample,
+            "use_cache": use_cache,
             "generation_mode": generation_mode,
             "repetition_penalty": repetition_penalty,
         }
@@ -238,17 +241,35 @@ class LocateAnythingConfig:
 class _InferenceNode:
     """Mixin that resolves the model + config and runs inference."""
 
+    VALID_KEYS = {
+        "max_new_tokens", "temperature", "top_p", "do_sample",
+        "use_cache", "generation_mode", "repetition_penalty",
+    }
+
     @staticmethod
     def _resolve_model_and_config(locate_anything, config):
         """Return (LocateAnythingModel, inference_kwargs)."""
+        if config is not None and not isinstance(config, dict):
+            raise TypeError(
+                f"Config must be a dict, got {type(config).__name__}. "
+                "Did you forget to wire a LocateAnythingConfig node?"
+            )
         if config is None:
             config = {}
+
+        unknown = set(config.keys()) - _InferenceNode.VALID_KEYS
+        if unknown:
+            print(
+                f"[LocateAnything] WARNING: unknown config keys ignored: "
+                f"{', '.join(sorted(unknown))}"
+            )
 
         inference_kw = {
             "max_new_tokens": config.get("max_new_tokens", 2048),
             "temperature": config.get("temperature", 0.7),
             "top_p": config.get("top_p", 0.9),
             "do_sample": config.get("do_sample", True),
+            "use_cache": config.get("use_cache", True),
             "generation_mode": config.get("generation_mode", "hybrid"),
             "repetition_penalty": config.get("repetition_penalty", 1.1),
         }
